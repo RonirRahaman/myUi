@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import $ from 'jquery';
 import 'datatables.net';
@@ -12,7 +12,7 @@ import styles from "./styles.module.css";
 const Main = () => {
     const [show, setShow] = useState(false);
     const handleClose = () => setShow(false);
-    const handleShow = () => { clearForm();setShow(true);setSuccess('');setError('');};
+    const handleShow = () => { clearForm(); setShow(true); setSuccess(''); setError(''); };
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
@@ -20,11 +20,35 @@ const Main = () => {
     const [success, setSuccess] = useState('');
     const [targetId, setTargetId] = useState('');
 
-    useEffect(() => {
-        getAllContact();
+    const getAllContact = useCallback(async () => {
+        try {
+            const userId = localStorage.getItem("userId");
+            const token = localStorage.getItem("token");
+            const url = `https://mycontact-wvem.onrender.com/api/ronir/?id=${userId}`;
+
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            };
+
+            const res = await axios.get(url, config);
+            setContacts(res.data);
+        }
+        catch (error) {
+            if (
+                error.response &&
+                error.response.status >= 400 &&
+                error.response.status <= 500
+            ) {
+                console.error(error.response.data.message);
+            }
+        }
     }, []);
 
     useEffect(() => {
+        getAllContact();
+
         const handleEditClick = async (event) => {
             const id = event.target.id;
 
@@ -37,10 +61,10 @@ const Main = () => {
                 setEmail(email);
                 setPhone(phone);
                 setSuccess('');
-		        setError('');
+                setError('');
                 setTargetId(id);
                 // handleShow();
-				setShow(true);
+                setShow(true);
             }
             else if (id.startsWith('dataDel_')) {
                 try {
@@ -75,38 +99,12 @@ const Main = () => {
         return () => {
             document.removeEventListener('click', handleEditClick);
         };
-    }, []);
+    }, [getAllContact]);
 
     const handleLogout = () => {
         localStorage.removeItem("token");
         window.location.reload();
     };
-
-    async function getAllContact() {
-        try {
-            const userId = localStorage.getItem("userId");
-            const token = localStorage.getItem("token");
-            const url = `https://mycontact-wvem.onrender.com/api/ronir/?id=${userId}`;
-
-            const config = {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            };
-
-            const res = await axios.get(url, config);
-            setContacts(res.data);
-        }
-        catch (error) {
-            if (
-                error.response &&
-                error.response.status >= 400 &&
-                error.response.status <= 500
-            ) {
-                console.error(error.response.data.message);
-            }
-        }
-    }
 
     function setContacts(res) {
         let tableData = res.map(contact => ({
